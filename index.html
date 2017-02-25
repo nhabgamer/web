@@ -1,59 +1,32 @@
-<!DOCTYPE html>
-    <html>
-        <head>
-            <title>
+
+<!DOCTYPE html> 
+    <html> 
+        <head> 
+            <title> 
                 Sprite Demonstration
             </title>            
-            <style type="text/css">
+            <style type="text/css"> 
                 #draw-target {
                     width:480px;
                     height:320px;
                     background-color:#ccf;
                     position:relative;
+					border:1px solid;
             }
-            </style>
-            <script type="text/javascript">
-							// IE6 background image caching fix.
-							// Include this JavaScript a the top of your page.
-							try {
-									document.execCommand("BackgroundImageCache", false, true);
-							} catch(e) {}
-						</script>
-            <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js">
-            </script>
-            <script type="text/javascript">
-						
-						
-						var timeInfo = function (goalFPS) {
-       var oldTime, paused = true, iterCount = 0, totalFPS = 0;
-       return {
-               getInfo: function () {
-                       
-                       if(paused === true) {
-												 		paused=false;
-														oldTime = +new Date();
-                               return {elapsed:0, coeff:0, FPS:0, averageFPS:0 };                            
-                       }
-									
-											 var newTime = +new Date();
-                       var elapsed = newTime - oldTime;
-                       oldTime = newTime;
-                       var     FPS = 1000/elapsed;
-											 iterCount ++;
-											 totalFPS += FPS;	                      
-											 return {
-                               elapsed: elapsed,
-                               coeff: goalFPS / FPS,
-                               FPS: FPS,
-															 averageFPS: totalFPS / iterCount
-                       };
-               },
-               pause: function() {paused = true;}
-       };
-};
+            </style> 
+            <script type="text/javascript"> 
+							  // IE6 background image caching fix.
+							  // Include this JavaScript a the top of your page.
+							  try {
+								  	document.execCommand("BackgroundImageCache", false, true);
+							  } catch(e) {}
+						</script> 
+            <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"> 
+            </script> 
+            <script type="text/javascript"> 
 
-						
-						
+					
+
 						var DHTMLSprite = function (params) {
 								var width = params.width,
 										height = params.height,
@@ -90,39 +63,81 @@
 								};
 								return that;
 						};
-                var bouncySprite = function(params) {
-                    var x = params.x,
-                        y = params.y,
-                        xDir = params.xDir,
-                        yDir = params.yDir,
-                        maxX = params.maxX,
-                        maxY = params.maxY,
-                        animIndex = 0,
-                        that = DHTMLSprite(params);
-                    that.moveAndDraw = function(tCoeff) {
+						
+var CanvasSprite = function (params) {
+    // The canvas drawing context is passed in the params object.
+    var ctx = params.ctx,
+        width = params.width,
+        height = params.height,
+        imagesWidth = params.imagesWidth,
+        vOffset = 0,
+        hOffset = 0,
+        hide = false,
+        // An Image object is created, and this will be used as the source
+        // for the canvas drawImage function below.
+        img = new Image();
+    img.src = params.images;
 
-                        x += xDir * tCoeff;
-                        y += yDir * tCoeff;
-       									animIndex += xDir > 0 ? 1* tCoeff : -1* tCoeff;												
-												var animIndex2 = (animIndex%5)>>0;				
-												animIndex2 += animIndex2 < 0 ? 5: 0;
-
-                        if ((xDir < 0 && x < 0) || (xDir > 0 && x >= maxX)) {
-                            xDir = -xDir;
-                        }
-                        if ((yDir < 0 && y < 0) || (yDir > 0 && y >= maxY)) {
-                            yDir = -yDir;
-                        }
-                        that.changeImage(animIndex2);
-                        that.draw(x, y);
-                    };
-                    return that;
-                };
-                var bouncyBoss = function(numBouncy, $drawTarget) {
-                    var bouncys = [], timer = timeInfo(40);
-							    
+    return {
+        draw: function (x, y) {
+            if (hide) {
+                return;
+            }
+			// The drawImage function allows us to extract individual
+            // sprite images from a larger composite image.
+            ctx.drawImage(img, hOffset, vOffset, width, height,
+                x >> 0, y >> 0, width, height);
+        },
+        changeImage: function (index) {
+            index *= width;
+            vOffset = Math.floor(index / imagesWidth) * height;
+            hOffset = index % imagesWidth;
+        },
+        show: function () {
+            hide = false;
+        },
+        hide: function () {
+            hide = true;
+        },
+        destroy: function () {
+            return;
+        }
+    };
+};
+						
+							var bouncySprite = function(params) {
+					
+											var x = params.x,
+													y = params.y,
+													xDir = params.xDir,
+													yDir = params.yDir,
+													maxX = params.maxX,
+													maxY = params.maxY,
+													animIndex = 0,
+													that = CanvasSprite(params);
+											that.moveAndDraw = function() {                       
+													x += xDir;
+													y += yDir;
+													animIndex += xDir > 0 ? 1 : -1;
+													animIndex %= 5;
+													animIndex += animIndex < 0 ? 5: 0;
+													if ((xDir < 0 && x < 0) || (xDir > 0 && x >= maxX)) {
+															xDir = -xDir;
+													}
+													if ((yDir < 0 && y < 0) || (yDir > 0 && y >= maxY)) {
+															yDir = -yDir;
+													}
+													that.changeImage(animIndex);
+													
+													that.draw(x, y);
+											};
+											return that;
+									};
+								
+                var bouncyBoss = function(numBouncy, $drawTarget,ctx) {
+                    var bouncys = [];
                    
-										for (var i = 0; i < numBouncy; i++) {
+					for (var i = 0; i < numBouncy; i++) {
                         bouncys.push(bouncySprite({
                             images: 'cogs.png',
                             imagesWidth: 256,
@@ -134,34 +149,32 @@
                             xDir: Math.random() * 4 - 2,
                             yDir: Math.random() * 4 - 2,
                             maxX: $drawTarget.width() - 64,
-                            maxY: $drawTarget.height() - 64
+                            maxY: $drawTarget.height() - 64,
+							ctx:ctx
                         }));
                     }
-                    var moveAll = function() {                       
-										   var	timeData = timer.getInfo();
-											 var len = bouncys.length;
+                    var moveAll = function() {	
+						ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+                        var len = bouncys.length;
                         for (var i = 0; i < len; i++) {
-                            bouncys[i].moveAndDraw(timeData.coeff);
-                        }                    
-												$('#info1').text( 'FPS: ' + Math.floor(timeData.FPS) );
-												$('#info2').text( 'Average FPS: ' + Math.floor(timeData.averageFPS) );
-												$('#info3').text( 'Time Coefficient: ' +  timeData.coeff.toFixed(2));
-                        setTimeout(moveAll, 10);
+                            bouncys[i].moveAndDraw();
+                        }                      					
+                        setTimeout(moveAll, 50);
                     }
                     moveAll();
                 };
+								
                 $(document).ready(function() {
-                    bouncyBoss(100, $('#draw-target'));
+					var canvas = $('#draw-target')[0];
+                    bouncyBoss(30, $('#draw-target'),canvas.getContext("2d"));
                 });
-            </script>
-        </head>        
-        <body>
-       		  <p>DHTML Demonstration. Lots of spites moved and animated with time-adjustment. The speed of movement is adjusted so it looks like a consistent 40 frames per second update across different browsers and hardware. The actual frames per second achieved is shown below.</p>
-           <p><a href='/book'><<< Back</a></p>
-            <div id="draw-target">
-            </div>
-            <p id="info1"></p>
-            <p id="info2"></p>
-            <p id="info3"></p>
+            </script> 
+        </head>              
+        <body> 
+        	  <p>Canvas Demonstration. Lots of sprites moved and animated.</p> 
+            <p><a href='/book'><<< Back</a></p> 
+            <canvas id="draw-target" width = 480 height = 320> 
+            </canvas>           
+			
         </body>    
     </html>
